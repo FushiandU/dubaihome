@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,6 +36,7 @@ interface FormData {
 const ModernLandingPage: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({ name: '', email: '', phone: '' });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   const { scrollY } = useScroll();
@@ -43,21 +45,51 @@ const ModernLandingPage: React.FC = () => {
 
   // Track mouse position for interactive effects
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setMousePosition({ x: e.clientX, y: e.clientY });
+      }, 16); // 60fps throttling
     };
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
-    console.log('Form submitted:', formData);
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/submit-form', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setIsSubmitted(true);
+        toast.success('Guide sent successfully! Check your email.');
+      } else {
+        toast.error(result.message || 'Something went wrong. Please try again.');
+      }
+    } catch (error) {
+      console.error('Form submission error:', error);
+      toast.error('Network error. Please check your connection and try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const benefits = [
@@ -299,7 +331,7 @@ const ModernLandingPage: React.FC = () => {
                       <div key={i} className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs text-white font-semibold border-2 border-white">
                         {initials}
                       </div>
-                    ))}
+                    +971 55 799 4258
                   </div>
                   <span className="text-sm text-gray-600">500+ UK investors</span>
                 </div>
@@ -319,7 +351,7 @@ const ModernLandingPage: React.FC = () => {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="relative"
             >
-              <FloatingElement>
+              <div className="relative">
                 <Card className="backdrop-blur-xl bg-white/70 border border-white/40 shadow-2xl shadow-blue-500/10 rounded-3xl overflow-hidden">
                   <CardContent className="p-8">
                     {!isSubmitted ? (
@@ -387,10 +419,11 @@ const ModernLandingPage: React.FC = () => {
                           >
                             <Button 
                               type="submit" 
+                              disabled={isSubmitting}
                               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl h-12 text-lg shadow-lg shadow-blue-500/25"
                             >
                               <Download className="w-5 h-5 mr-2" />
-                              Download Guide Now
+                              {isSubmitting ? 'Sending...' : 'Download Guide Now'}
                             </Button>
                           </motion.div>
 
@@ -431,15 +464,37 @@ const ModernLandingPage: React.FC = () => {
                     )}
                   </CardContent>
                 </Card>
-              </FloatingElement>
+              </div>
 
               {/* Floating Elements */}
-              <FloatingElement delay={1}>
+              <motion.div
+                animate={{ 
+                  y: [0, -10, 0],
+                  rotate: [0, 1, 0]
+                }}
+                transition={{
+                  duration: 6,
+                  delay: 1,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
                 <div className="absolute -top-4 -left-4 w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-2xl opacity-20 blur-xl" />
-              </FloatingElement>
-              <FloatingElement delay={2}>
+              </motion.div>
+              <motion.div
+                animate={{ 
+                  y: [0, -10, 0],
+                  rotate: [0, 1, 0]
+                }}
+                transition={{
+                  duration: 6,
+                  delay: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
                 <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-gradient-to-r from-pink-400 to-red-400 rounded-2xl opacity-20 blur-xl" />
-              </FloatingElement>
+              </motion.div>
             </motion.div>
           </div>
         </div>
@@ -701,7 +756,7 @@ const ModernLandingPage: React.FC = () => {
                 </div>
                 <div className="flex items-center text-sm text-gray-600">
                   <Users className="w-4 h-4 mr-1" />
-                  500+ Clients
+                  <div>📧 shibikabeer@gmail.com</div>
                 </div>
               </div>
             </div>
@@ -752,7 +807,7 @@ const ModernLandingPage: React.FC = () => {
           <Button 
             size="lg" 
             className="rounded-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white w-14 h-14 shadow-2xl shadow-green-500/25"
-            onClick={() => window.open('https://wa.me/971501234567', '_blank')}
+            onClick={() => window.open('https://wa.me/971557994258', '_blank')}
           >
             <MessageCircle className="w-6 h-6" />
           </Button>
